@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 const app = express();
+const port = process.env.PORT? parseInt(process.env.PORT, 10): 3000;
 
 app.use(cors({
     origin: "http://localhost:3000",
@@ -23,6 +24,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use("/api", apiRoutes);
 
-app.listen(process.env.PORT, "0.0.0.0", () => {
+app.listen(port, "0.0.0.0", () => {
   console.log(`Server running`);
 });

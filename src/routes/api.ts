@@ -1,51 +1,62 @@
-import express, { Request, Response, NextFunction } from "express";
+import express, { Request, Response, NextFunction, RequestHandler } from "express";
 import { getDb } from "../db/connection";
-import { Pool } from "mysql2/promise";
+import type { Pool } from "mysql2/promise";
+
+declare module "express-serve-static-core" {
+  interface Request {
+    dbName: string;
+    db: Pool;
+  }
+}
 
 const router = express.Router();
 
-interface CustomRequest extends Request {
-  db?: string;
-  socket?: Pool;
-}
-
-router.use((req: CustomRequest, res: Response, next: NextFunction) => {
-  const dbName = req.headers["db"] as string;
-
+const dbMiddleware: RequestHandler = (req, res, next) => {
+  const dbName = req.headers["db"] as string | undefined;
+  if (!dbName) {
+    res.status(400).json({ error: "Missing 'db' header" });
+    return;       
+  }
 
   const dbConnection = getDb(dbName);
+  if (!dbConnection) {
+    res.status(500).json({ error: "Failed to connect to the database" });
+    return;
+  }
 
-  req.db = dbName;
-  req.socket = dbConnection;
+  req.dbName = dbName;
+  req.db     = dbConnection;
   next();
-});
+};
 
-router.get("/all_data", async (req: CustomRequest, res: Response) => {
+router.use(dbMiddleware);
+
+router.get("/all_data", async (req, res) => {
   try {
-    const dbName = req.db!;
-    const pool = req.socket!;
-
-    const [tableResults] = await pool.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = '${dbName}'
-    `);
-
-    const tables = (tableResults as any[])
-      .map(row => row.TABLE_NAME)
-      .filter((table: string) => table !== "survey_metadata");
+    const { dbName, db } = req;
+    const [tableResults] = await db.query<any[]>(
+      `SELECT table_name
+         FROM information_schema.tables
+        WHERE table_schema = ?`,
+      [dbName]
+    );
+    const tables = tableResults
+      .map(r => r.TABLE_NAME)
+      .filter(t => t !== "survey_metadata");
 
     let query = `SELECT * FROM ${dbName}.survey_metadata`;
+    for (const table of tables) {
+      query += `
+        LEFT JOIN ${dbName}.${table}
+          ON survey_metadata.responseID = ${table}.responseID
+      `;
+    }
 
-    tables.forEach((table) => {
-      query += ` LEFT JOIN ${dbName}.${table} 
-                 ON survey_metadata.responseID = ${table}.responseID`;
-    });
-
-    const [results] = await pool.query(query);
+    const [results] = await db.query(query);
     res.json(results);
-  } catch (error: any) {
-    console.error("Error fetching data:", error.sqlMessage || error.message || error);
+  } catch (err: any) {
+    console.error("Error fetching data:", err.sqlMessage || err.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

@@ -33,7 +33,7 @@ databases.forEach((db) => {
       user: process.env.RDS_USER,
       password: process.env.RDS_PASSWORD,
       database: db,
-      port: parseInt(process.env.RDS_PORT, 10),
+      port: parseInt(process.env.RDS_PORT!, 10),
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
