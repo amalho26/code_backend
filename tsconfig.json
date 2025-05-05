@@ -2,13 +2,14 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
+    "rootDir": "src",        // ← only compile files under src/
     "outDir": "dist",
-    "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["./"]
+  "include": ["src/**/*"],   // ← only include your TS source
+  "exclude": ["node_modules","dist"]
 }
