@@ -9,15 +9,10 @@ const app = express();
 const port = process.env.PORT? parseInt(process.env.PORT, 10): 3000;
 
 app.use(cors({
-    origin: "http://localhost:3000",
+    origin: "http://playground.c-dem.ca",
     methods: "GET,POST,PUT,DELETE",
-    credentials: true
+    allowedHeaders: ["Content-Type","db"],
 }));
-// app.use(cors({
-//     origin: "https://data-playground.c-dem.ca",
-//     methods: "GET,POST,PUT,DELETE",
-//     credentials: true
-//   }));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
